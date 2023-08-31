@@ -1,0 +1,15 @@
+{{- if not .Values.postgres.external.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ printf "%s-env" (include "postgres.name" .) }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "postgres.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+data:
+  BITNAMI_DEBUG: "false"
+  POSTGRESQL_PASSWORD: "{{include "postgres.password" .}}"
+{{- end }}

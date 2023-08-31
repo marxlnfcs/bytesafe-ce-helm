@@ -1,0 +1,19 @@
+{{- if not .Values.postgres.external.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "postgres.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "postgres.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ default "ClusterIP" .Values.postgres.service.type }}
+  ports:
+    - name: postgres
+      port: {{ default "5432" .Values.postgres.service.port | toString }}
+      targetPort: postgres
+  selector: {{- include "postgres.labels" . | nindent 4 }}
+{{- end }}

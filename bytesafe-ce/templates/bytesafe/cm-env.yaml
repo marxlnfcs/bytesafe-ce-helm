@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ printf "%s-env" (include "bytesafe.name" .) }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "bytesafe.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+data:
+  # Common
+  DATA_ENCRYPTION_KEY: "{{ .Values.common.dataEncryptionKey }}"
+  URL_PREFIX: "{{ include "bytesafe.url" . }}"
+  ALLOW_PRIVATE_IPS: "{{ .Values.common.allowPrivateIpAddresses }}"
+  TELEMETRY: "{{ .Values.common.telemetry }}"
+
+  # SMTP
+  {{- if .Values.common.smtp.enabled }}
+  SMTP_HOST: "{{ .Values.common.smtp.host }}"
+  SMTP_PORT: "{{ .Values.common.smtp.port }}"
+  SMTP_USER: "{{ .Values.common.smtp.username }}"
+  SMTP_PASSWORD: "{{ .Values.common.smtp.password }}"
+  SMTP_FROM_ADDRESS: "{{ .Values.common.smtp.fromAddress }}"
+  {{- end }}
+
+  # PostgreSQL
+  DB_HOST: "{{ include "postgres.host" . }}"
+  DB_PORT: "{{ include "postgres.port" . }}"
+  DB_USER: "{{ include "postgres.username" . }}"
+  DB_PASSWORD: "{{ include "postgres.password" . }}"
+  DB_ADMIN_USER: "{{ include "postgres.admin.username" . }}"
+  DB_ADMIN_PASSWORD: "{{ include "postgres.admin.password" . }}"
+
+  # Redis
+  REDIS_HOST: "{{ include "redis.host" . }}"
+  REDIS_PORT: "{{ include "redis.port" . }}"
+  REDIS_USER: "{{ include "redis.username" . }}"
+  REDIS_PASSWORD: "{{ include "redis.password" . }}"

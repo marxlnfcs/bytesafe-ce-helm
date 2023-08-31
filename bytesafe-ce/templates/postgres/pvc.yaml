@@ -1,0 +1,23 @@
+{{- if and (not .Values.postgres.external.enabled) (.Values.postgres.persistence.enabled) (not .Values.postgres.persistence.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "postgres.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "postgres.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.postgres.persistence.storageClass }}
+  storageClassName: "{{ default "" .Values.postgres.persistence.storageClass }}"
+  {{- end }}
+  accessModes:
+  {{- range .Values.postgres.persistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size | quote }}
+{{- end }}

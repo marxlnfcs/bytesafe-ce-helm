@@ -1,0 +1,23 @@
+{{- if and (.Values.bytesafe.persistence.enabled) (not .Values.bytesafe.persistence.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "bytesafe.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "bytesafe.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.bytesafe.persistence.storageClass }}
+  storageClassName: "{{ default "" .Values.bytesafe.persistence.storageClass }}"
+  {{- end }}
+  accessModes:
+  {{- range .Values.bytesafe.persistence.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.bytesafe.persistence.size | quote }}
+{{- end }}

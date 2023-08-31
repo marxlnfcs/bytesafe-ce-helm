@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bytesafe.name" . }}
+  namespace: "{{ .Release.Namespace }}"
+  labels: {{- include "bytesafe.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.commonAnnotations }}
+    {{ toYaml .Values.commonAnnotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.bytesafe.autoscaling.enabled }}
+  replicas: {{ .Values.bytesafe.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "bytesafe.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "bytesafe.labels" . | nindent 8 }}
+      annotations:
+        checksum/cm-env: "{{ include (print $.Template.BasePath "/bytesafe/cm-env.yaml") . | sha256sum }}"
+        {{- if .Values.bytesafe.podAnnotations }}
+        {{ toYaml .Values.bytesafe.podAnnotations | nindent 8 }}
+        {{- end }}
+        {{- if .Values.commonAnnotations }}
+        {{ toYaml .Values.commonAnnotations | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: "{{ default (include "bytesafe.name" . ) .Values.serviceAccount.bytesafe.name }}"
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.bytesafe.podSecurityContext | nindent 8 }}
+      {{- with .Values.bytesafe.nodeSelector }}
+      nodeSelector:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bytesafe.affinity }}
+      affinity:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.bytesafe.tolerations }}
+      tolerations:
+         {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.global.waitForTCPDependency.image.name }}
+          imagePullPolicy: {{ .Values.global.waitForTCPDependency.image.pullPolicy }}
+          command: {{ .Values.global.waitForTCPDependency.image.command | toYaml | nindent 12  }}
+          args: {{ .Values.global.waitForTCPDependency.image.args | toYaml | nindent 12  }}
+          env:
+            - name: HOST
+              value: "{{ include "postgres.host" . }}"
+            - name: PORT
+              value: "{{ include "postgres.port" . }}"
+
+        - name: wait-for-redis
+          image: {{ .Values.global.waitForTCPDependency.image.name }}
+          imagePullPolicy: {{ .Values.global.waitForTCPDependency.image.pullPolicy }}
+          command: {{ .Values.global.waitForTCPDependency.image.command | toYaml | nindent 12  }}
+          args: {{ .Values.global.waitForTCPDependency.image.args | toYaml | nindent 12  }}
+          env:
+            - name: HOST
+              value: "{{ include "redis.host" . }}"
+            - name: PORT
+              value: "{{ include "redis.port" . }}"
+
+      containers:
+        - name: bytesafe
+          securityContext:
+            {{- toYaml .Values.bytesafe.securityContext | nindent 12 }}
+          image: "{{ .Values.bytesafe.image.name }}"
+          imagePullPolicy: {{ .Values.bytesafe.image.pullPolicy }}
+          command: ["/bytesafe-ce", "--setupdb"]
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: "{{ printf "%s-env" (include "bytesafe.name" .) }}"
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+          resources:
+            {{- toYaml .Values.bytesafe.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/bytesafe
+      volumes:
+        {{- if not .Values.bytesafe.persistence.enabled }}
+        - name: data
+          emptyDir: { }
+        {{- else if .Values.bytesafe.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.bytesafe.persistence.existingClaim }}
+        {{- else }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ printf "%s" (include "bytesafe.name" . ) }}
+        {{- end }}
