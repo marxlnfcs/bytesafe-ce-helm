@@ -1,6 +1,6 @@
 apiVersion: v2
 name: bytesafe-ce
-description: A chart for running a whole bytesafe-ce installation
+description: A chart for running a whole chart installation
 
 # A chart can be either an 'application' or a 'library' chart.
 #

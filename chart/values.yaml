@@ -119,7 +119,7 @@ bytesafe:
   ## @param bytesafe.image - Image configuration
   ##
   image:
-    name: bytesafe/bytesafe-ce:latest
+    name: bytesafe/chart:latest
     pullPolicy: IfNotPresent
 
   ## @param bytesafe.service - Service configuration
